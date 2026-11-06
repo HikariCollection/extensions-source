@@ -18,7 +18,7 @@ class MGKomik : KeiSource() {
 
     override val name: String = "MG Komik"
     override val lang: String = "id"
-    override val baseUrl: String = "https://web1.mgkomik.cc"
+    override val baseUrl: String = "https://id.mgkomik.cc"
     override val versionId: Int = 2
 
     override val supportsLatest: Boolean = true
@@ -109,7 +109,7 @@ class MGKomik : KeiSource() {
     )
 
     override suspend fun getMangaByUrl(url: HttpUrl): SManga? {
-        if (url.host != baseUrl.toHttpUrl().host) return null
+        if (url.host != baseUrl.toHttpUrl().host && !url.host.contains("mgkomik")) return null
         val document = client.get(url).asJsoup()
         return parseMangaDetails(document, SManga.create().apply { this.url = url.encodedPath })
     }

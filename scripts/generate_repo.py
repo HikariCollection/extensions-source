@@ -49,12 +49,14 @@ EXTENSIONS = [
         "slug": "mgkomik",
         "pkgName": "app.hikari.extension.id.mgkomik",
         "contentWarning": "SAFE",
+        "versionCode": 2,
+        "versionName": "1.1.2",
         "sources": [
             {
                 "id": 385263422541320229,
                 "name": "MG Komik",
                 "language": "id",
-                "homeUrl": "https://web1.mgkomik.cc",
+                "homeUrl": "https://id.mgkomik.cc",
             }
         ],
     },
@@ -130,8 +132,8 @@ def main():
                 "iconUrl": f"{RAW_BASE}/icon/hikari-{lang}-{slug}-release.png",
             },
             "extensionLib": "1.1",
-            "versionCode": 1,
-            "versionName": "1.1.1",
+            "versionCode": ext.get("versionCode", 1),
+            "versionName": ext.get("versionName", "1.1.1"),
             "contentWarning": ext["contentWarning"],
             "sources": sources_data,
         })
