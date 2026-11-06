@@ -3,14 +3,17 @@ package app.hikari.extension.id.mgkomik
 import app.hikari.extension.core.KeiSource
 import app.hikari.extension.core.asJsoup
 import app.hikari.extension.core.get
+import app.hikari.network.GET
 import app.hikari.source.model.FilterList
 import app.hikari.source.model.MangasPage
 import app.hikari.source.model.Page
 import app.hikari.source.model.SChapter
 import app.hikari.source.model.SManga
 import app.hikari.source.model.SMangaUpdate
+import okhttp3.Headers
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.Request
 import org.jsoup.nodes.Document
 import java.util.Calendar
 
@@ -18,10 +21,21 @@ class MGKomik : KeiSource() {
 
     override val name: String = "MG Komik"
     override val lang: String = "id"
-    override val baseUrl: String = "https://id.mgkomik.cc"
+    override val baseUrl: String = "https://web1.mgkomik.cc"
     override val versionId: Int = 2
 
     override val supportsLatest: Boolean = true
+
+    override fun headersBuilder(): Headers.Builder = super.headersBuilder().apply {
+        add("Referer", "$baseUrl/")
+    }
+
+    override fun imageRequest(page: Page): Request {
+        val imageHeaders = headers.newBuilder()
+            .set("Referer", "$baseUrl/")
+            .build()
+        return GET(page.imageUrl!!, imageHeaders)
+    }
 
     // ============================== Popular ===============================
 

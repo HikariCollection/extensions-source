@@ -49,14 +49,14 @@ EXTENSIONS = [
         "slug": "mgkomik",
         "pkgName": "app.hikari.extension.id.mgkomik",
         "contentWarning": "SAFE",
-        "versionCode": 2,
-        "versionName": "1.1.2",
+        "versionCode": 3,
+        "versionName": "1.1.3",
         "sources": [
             {
                 "id": 385263422541320229,
                 "name": "MG Komik",
                 "language": "id",
-                "homeUrl": "https://id.mgkomik.cc",
+                "homeUrl": "https://web1.mgkomik.cc",
             }
         ],
     },
