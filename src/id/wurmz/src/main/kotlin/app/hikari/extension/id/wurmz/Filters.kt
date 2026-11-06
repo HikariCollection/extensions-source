@@ -1,0 +1,151 @@
+package app.hikari.extension.id.wurmz
+
+import app.hikari.source.model.Filter
+
+internal open class UriPartFilter(displayName: String, private val vals: Array<Pair<String, String>>) :
+    Filter.Select<String>(displayName, vals.map { it.first }.toTypedArray()) {
+    fun toUriPart() = vals[state].second
+}
+
+internal class SortFilter :
+    UriPartFilter(
+        "Urutkan",
+        arrayOf(
+            "Update Terbaru" to "update",
+            "Komik Baru" to "new",
+            "Terlama" to "old",
+            "Populer Hari Ini" to "popular_today",
+            "Populer 3 Hari" to "popular_3d",
+            "Populer 7 Hari" to "popular_7d",
+            "Populer 1 Bulan" to "popular_30d",
+            "Populer Sepanjang Masa" to "popular_all",
+        ),
+    )
+
+internal class TypeFilter :
+    UriPartFilter(
+        "Tipe",
+        arrayOf(
+            "Semua Tipe" to "",
+            "Manga" to "manga",
+            "Manhwa" to "manhwa",
+            "Manhua" to "manhua",
+        ),
+    )
+
+internal class StatusFilter :
+    UriPartFilter(
+        "Status",
+        arrayOf(
+            "Semua Status" to "",
+            "Ongoing" to "ongoing",
+            "Tamat" to "tamat",
+            "Hiatus" to "hiatus",
+            "Drop" to "drop",
+        ),
+    )
+
+internal class GenreFilter : UriPartFilter("Genre", GENRES)
+
+private val GENRES = arrayOf(
+    "Semua Genre" to "",
+    "18+" to "18+",
+    "4-Koma" to "4-Koma",
+    "Action" to "Action",
+    "Adaptation" to "Adaptation",
+    "Adventure" to "Adventure",
+    "Age Gap" to "Age Gap",
+    "Aliens" to "Aliens",
+    "Animals" to "Animals",
+    "Anthology" to "Anthology",
+    "BDSM" to "BDSM",
+    "Beasts" to "Beasts",
+    "Bloody" to "Bloody",
+    "Bodyswap" to "Bodyswap",
+    "Boys" to "Boys",
+    "Cheating" to "Cheating",
+    "Childhood Friends" to "Childhood Friends",
+    "College Life" to "College Life",
+    "Comedy" to "Comedy",
+    "Cooking" to "Cooking",
+    "Crime" to "Crime",
+    "Crossdressing" to "Crossdressing",
+    "Cunnilingus" to "Cunnilingus",
+    "Delinguents" to "Delinguents",
+    "Dementia" to "Dementia",
+    "Demons" to "Demons",
+    "Doujinshi" to "Doujinshi",
+    "Drama" to "Drama",
+    "Dungeons" to "Dungeons",
+    "Ecchi" to "Ecchi",
+    "Fantasy" to "Fantasy",
+    "Femdom" to "Femdom",
+    "Fetish" to "Fetish",
+    "Game" to "Game",
+    "Gender Bender" to "Gender Bender",
+    "Ghosts" to "Ghosts",
+    "Girls" to "Girls",
+    "Gore" to "Gore",
+    "Guideverse" to "Guideverse",
+    "Gyaru" to "Gyaru",
+    "Harem" to "Harem",
+    "Hentai" to "Hentai",
+    "Historical" to "Historical",
+    "Horror" to "Horror",
+    "Incest" to "Incest",
+    "Infidelity" to "Infidelity",
+    "Isekai" to "Isekai",
+    "Josei" to "Josei",
+    "Kids" to "Kids",
+    "Lolicon" to "Lolicon",
+    "Mafia" to "Mafia",
+    "Magic" to "Magic",
+    "Magical Girls" to "Magical Girls",
+    "Manhua" to "Manhua",
+    "Manhwa" to "Manhwa",
+    "Martial Arts" to "Martial Arts",
+    "Mature" to "Mature",
+    "Mecha" to "Mecha",
+    "Medical" to "Medical",
+    "Military" to "Military",
+    "Monster Girls" to "Monster Girls",
+    "Monsters" to "Monsters",
+    "Music" to "Music",
+    "Mystery" to "Mystery",
+    "Netorare" to "Netorare",
+    "Ninja" to "Ninja",
+    "Office Workers" to "Office Workers",
+    "Philosophical" to "Philosophical",
+    "Police" to "Police",
+    "Post-Apocalyptic" to "Post-Apocalyptic",
+    "Psychological" to "Psychological",
+    "Reincarnation" to "Reincarnation",
+    "Reverse Harem" to "Reverse Harem",
+    "Romance" to "Romance",
+    "Samurai" to "Samurai",
+    "School Life" to "School Life",
+    "Sci-Fi" to "Sci-Fi",
+    "Seinen" to "Seinen",
+    "Shoujo" to "Shoujo",
+    "Shoujo Ai" to "Shoujo Ai",
+    "Shounen" to "Shounen",
+    "Shounen Ai" to "Shounen Ai",
+    "Slice of Life" to "Slice of Life",
+    "Smut" to "Smut",
+    "Sports" to "Sports",
+    "Super Power" to "Super Power",
+    "Supernatural" to "Supernatural",
+    "Survival" to "Survival",
+    "Thriller" to "Thriller",
+    "Time Travel" to "Time Travel",
+    "Tragedy" to "Tragedy",
+    "Vampires" to "Vampires",
+    "Villainess" to "Villainess",
+    "Virtual Reality" to "Virtual Reality",
+    "Web Comic" to "Web Comic",
+    "Wuxia" to "Wuxia",
+    "Yaoi" to "Yaoi",
+    "Yuri" to "Yuri",
+    "Zombies" to "Zombies",
+)
+
