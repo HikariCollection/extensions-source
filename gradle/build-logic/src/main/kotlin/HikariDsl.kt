@@ -14,6 +14,7 @@ abstract class HikariExtension @Inject constructor(
     private val objects: ObjectFactory,
 ) {
     abstract val name: Property<String>
+    abstract val theme: Property<String>
     abstract val extensionClass: Property<String>
     abstract val versionCode: Property<Int>
     abstract val libVersion: Property<String>
@@ -24,6 +25,11 @@ abstract class HikariExtension @Inject constructor(
     fun source(block: ExtensionSource.() -> Unit) {
         sources.add(objects.newInstance<ExtensionSource>().apply(block))
     }
+}
+
+abstract class HikariThemeExtension {
+    abstract val baseVersionCode: Property<Int>
+    abstract val libVersion: Property<String>
 }
 
 abstract class ExtensionSource {

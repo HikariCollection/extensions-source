@@ -26,6 +26,7 @@ dependencyResolutionManagement {
 rootProject.name = "hikari-extensions"
 
 include(":core")
+File(rootDir, "lib-multisrc").eachDir { include("lib-multisrc:${it.name}") }
 loadAllIndividualExtensions()
 
 fun loadAllIndividualExtensions() {

@@ -10,6 +10,7 @@ import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.dependencies
+import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.register
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
@@ -27,6 +28,7 @@ internal data class HikariExtensionMetadata(
     val contentWarning: String,
     val apkFileName: String,
     val iconFileName: String,
+    val theme: String? = null,
     val sources: List<HikariSourceMetadata>,
 )
 
@@ -99,6 +101,7 @@ class HikariExtensionPlugin : Plugin<Project> {
 
         dependencies {
             add("compileOnly", libs.findLibrary("hikari-source-api").get())
+            add("compileOnly", libs.findLibrary("jspecify").get())
             add("implementation", project(":core"))
             add("compileOnly", libs.findLibrary("okhttp").get())
             add("compileOnly", libs.findLibrary("okhttp-brotli").get())
@@ -109,9 +112,24 @@ class HikariExtensionPlugin : Plugin<Project> {
             add("compileOnly", libs.findLibrary("coroutines-android").get())
         }
 
+        val themeExtension = hikari.theme.map { themeName ->
+            evaluationDependsOn(":lib-multisrc:$themeName").extensions.findByType<HikariThemeExtension>()
+                ?: error("Theme project :lib-multisrc:$themeName must apply hikari.plugins.theme")
+        }
+
+        afterEvaluate {
+            if (hikari.theme.isPresent) {
+                dependencies {
+                    add("implementation", project(":lib-multisrc:${hikari.theme.get()}"))
+                }
+            }
+        }
+
         val extNameProvider = hikari.name.orElse(slug.replaceFirstChar { it.uppercase() })
-        val libVersionProvider = hikari.libVersion.orElse("1.1")
-        val versionCodeProvider = hikari.versionCode.orElse(1)
+        val libVersionProvider = themeExtension.flatMap { it.libVersion }.orElse(hikari.libVersion.orElse("1.1"))
+        val versionCodeProvider = themeExtension.flatMap { theme ->
+            theme.baseVersionCode.zip(hikari.versionCode.orElse(1)) { base, ext -> base + ext }
+        }.orElse(hikari.versionCode.orElse(1))
         val cwProvider = hikari.contentWarning.orElse(ContentWarning.SAFE)
 
         val classNameProvider = hikari.extensionClass.orElse(
@@ -182,6 +200,7 @@ class HikariExtensionPlugin : Plugin<Project> {
                             contentWarning = cwString,
                             apkFileName = apkName,
                             iconFileName = "hikari-$lang-$slug-release.png",
+                            theme = hikari.theme.orNull,
                             sources = sourcesList,
                         )
 

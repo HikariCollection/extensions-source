@@ -39,6 +39,10 @@ def main():
             shutil.copy2(apk_src, apk_dest)
 
         icon_src = module_dir / "src" / "main" / "res" / "mipmap-xxxhdpi" / "ic_launcher.png"
+        if not icon_src.exists():
+            icon_src = module_dir / "res" / "mipmap-xxxhdpi" / "ic_launcher.png"
+        if not icon_src.exists() and info.get("theme"):
+            icon_src = BASE_DIR / "lib-multisrc" / info["theme"] / "res" / "mipmap-xxxhdpi" / "ic_launcher.png"
         icon_dest = REPO_ICON_DIR / icon_name
         if icon_src.exists():
             shutil.copy2(icon_src, icon_dest)

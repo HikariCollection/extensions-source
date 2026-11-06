@@ -23,16 +23,19 @@ class AuditResult:
     modules: int = 0
 
 
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
 def audit() -> AuditResult:
     result = AuditResult()
     owners: dict[str, str] = {}
 
-    build_files = sorted(Path("src").glob("*/*/build.gradle.kts"))
+    build_files = sorted((BASE_DIR / "src").glob("*/*/build.gradle.kts"))
     result.modules = len(build_files)
 
     for build_file in build_files:
-        module = build_file.parent.as_posix()
-        lang, name = build_file.parts[1], build_file.parts[2]
+        module = build_file.parent.relative_to(BASE_DIR).as_posix()
+        parts = build_file.relative_to(BASE_DIR).parts
+        lang, name = parts[1], parts[2]
         default = f"{lang}.{name}"
         suffix = default
         suffix_line = 1

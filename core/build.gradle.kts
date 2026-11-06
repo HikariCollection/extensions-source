@@ -23,7 +23,7 @@ android {
 
 dependencies {
     compileOnly(libs.hikari.source.api)
-    compileOnly("org.jspecify:jspecify:1.0.0")
+    compileOnly(libs.jspecify)
 
     compileOnly(libs.okhttp)
     compileOnly(libs.okhttp.brotli)

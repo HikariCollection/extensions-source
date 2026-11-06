@@ -15,5 +15,9 @@ gradlePlugin {
             id = "hikari.plugins.extension"
             implementationClass = "HikariExtensionPlugin"
         }
+        register("theme") {
+            id = "hikari.plugins.theme"
+            implementationClass = "HikariThemePlugin"
+        }
     }
 }
