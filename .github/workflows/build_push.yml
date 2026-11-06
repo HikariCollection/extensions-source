@@ -38,11 +38,14 @@ jobs:
             echo "$SIGNING_KEY_BASE64" | base64 -d > signingkey.jks
           fi
 
+      - name: Audit package names
+        run: python3 .github/scripts/audit-packages.py
+
       - name: Build release extension APKs
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Generate extension repository index
-        run: python3 scripts/generate_repo.py
+        run: python3 .github/scripts/generate_repo.py
 
       - name: Deploy to HikariCollection/extensions (repo branch)
         uses: peaceiris/actions-gh-pages@v4
