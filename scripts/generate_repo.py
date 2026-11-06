@@ -49,8 +49,8 @@ EXTENSIONS = [
         "slug": "mgkomik",
         "pkgName": "app.hikari.extension.id.mgkomik",
         "contentWarning": "SAFE",
-        "versionCode": 3,
-        "versionName": "1.1.3",
+        "versionCode": 2,
+        "versionName": "1.1.2",
         "sources": [
             {
                 "id": 385263422541320229,
