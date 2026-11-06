@@ -53,11 +53,12 @@ dependencies {
     compileOnly(libs.hikari.source.api)
     implementation(project(":core"))
 
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.brotli)
-    implementation(libs.jsoup)
-    implementation(libs.kotlin.json)
-    implementation(libs.injekt.core)
-    implementation(libs.coroutines.core)
-    implementation(libs.coroutines.android)
+    compileOnly(libs.okhttp)
+    compileOnly(libs.okhttp.brotli)
+    compileOnly(libs.jsoup)
+    compileOnly(libs.kotlin.json)
+    compileOnly(libs.injekt.core)
+    compileOnly(libs.coroutines.core)
+    compileOnly(libs.coroutines.android)
 }
+
