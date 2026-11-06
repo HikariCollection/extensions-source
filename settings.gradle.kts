@@ -4,6 +4,7 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
         mavenLocal()
+        maven(url = "https://raw.githubusercontent.com/HikariCollection/extensions/maven")
         maven(url = "https://www.jitpack.io")
     }
 }
@@ -16,6 +17,7 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         mavenLocal()
+        maven(url = "https://raw.githubusercontent.com/HikariCollection/extensions/maven")
         maven(url = "https://www.jitpack.io")
     }
 }
