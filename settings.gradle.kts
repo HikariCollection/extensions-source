@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("gradle/build-logic")
     repositories {
         google()
         mavenCentral()
@@ -25,8 +26,21 @@ dependencyResolutionManagement {
 rootProject.name = "hikari-extensions"
 
 include(":core")
-include(":src:en:roliascan")
-include(":src:en:arenascans")
-include(":src:id:mgkomik")
-include(":src:id:shinigami")
-include(":src:id:wurmz")
+loadAllIndividualExtensions()
+
+fun loadAllIndividualExtensions() {
+    File(rootDir, "src").eachDir { dir ->
+        dir.eachDir { subdir ->
+            include("src:${dir.name}:${subdir.name}")
+        }
+    }
+}
+
+fun File.eachDir(block: (File) -> Unit) {
+    val files = listFiles() ?: return
+    for (file in files) {
+        if (file.isDirectory && file.name != ".gradle" && file.name != "build") {
+            block(file)
+        }
+    }
+}

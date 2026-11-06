@@ -1,64 +1,16 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.hikari.extension)
 }
 
-val signingKeyFile = rootProject.file("signingkey.jks")
+hikari {
+    name.set("Wurmz")
+    versionCode.set(1)
+    libVersion.set("1.1")
+    contentWarning.set(ContentWarning.MIXED)
 
-android {
-    namespace = "app.hikari.extension.id.wurmz"
-    compileSdk = 37
-
-    defaultConfig {
-        applicationId = "app.hikari.extension.id.wurmz"
-        minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.1.1"
-    }
-
-    signingConfigs {
-        create("release") {
-            if (signingKeyFile.exists()) {
-                storeFile = signingKeyFile
-                storePassword = System.getenv("KEY_STORE_PASSWORD") ?: "hikari-extensions"
-                keyAlias = System.getenv("ALIAS") ?: "hikari-extensions"
-                keyPassword = System.getenv("KEY_PASSWORD") ?: "hikari-extensions"
-            }
-        }
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            signingConfig = if (signingKeyFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    kotlin {
-        jvmToolchain(21)
+    source {
+        lang.set("id")
+        baseUrl = "https://wurmz.net"
+        versionId.set(1)
     }
 }
-
-base {
-    archivesName.set("hikari-id-wurmz")
-}
-
-dependencies {
-    compileOnly(libs.hikari.source.api)
-    implementation(project(":core"))
-
-    compileOnly(libs.okhttp)
-    compileOnly(libs.okhttp.brotli)
-    compileOnly(libs.jsoup)
-    compileOnly(libs.kotlin.json)
-    compileOnly(libs.injekt.core)
-    compileOnly(libs.coroutines.core)
-    compileOnly(libs.coroutines.android)
-}
-

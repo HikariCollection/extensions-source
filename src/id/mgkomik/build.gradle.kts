@@ -1,64 +1,16 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.hikari.extension)
 }
 
-val signingKeyFile = rootProject.file("signingkey.jks")
+hikari {
+    name.set("MG Komik")
+    versionCode.set(2)
+    libVersion.set("1.1")
+    contentWarning.set(ContentWarning.SAFE)
 
-android {
-    namespace = "app.hikari.extension.id.mgkomik"
-    compileSdk = 37
-
-    defaultConfig {
-        applicationId = "app.hikari.extension.id.mgkomik"
-        minSdk = 26
-        targetSdk = 35
-        versionCode = 2
-        versionName = "1.1.2"
-    }
-
-    signingConfigs {
-        create("release") {
-            if (signingKeyFile.exists()) {
-                storeFile = signingKeyFile
-                storePassword = System.getenv("KEY_STORE_PASSWORD") ?: "hikari-extensions"
-                keyAlias = System.getenv("ALIAS") ?: "hikari-extensions"
-                keyPassword = System.getenv("KEY_PASSWORD") ?: "hikari-extensions"
-            }
-        }
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            signingConfig = if (signingKeyFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    kotlin {
-        jvmToolchain(21)
+    source {
+        lang.set("id")
+        baseUrl = "https://web1.mgkomik.cc"
+        versionId.set(2)
     }
 }
-
-base {
-    archivesName.set("hikari-id-mgkomik")
-}
-
-dependencies {
-    compileOnly(libs.hikari.source.api)
-    implementation(project(":core"))
-
-    compileOnly(libs.okhttp)
-    compileOnly(libs.okhttp.brotli)
-    compileOnly(libs.jsoup)
-    compileOnly(libs.kotlin.json)
-    compileOnly(libs.injekt.core)
-    compileOnly(libs.coroutines.core)
-    compileOnly(libs.coroutines.android)
-}
-

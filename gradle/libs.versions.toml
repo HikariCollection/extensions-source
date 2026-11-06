@@ -8,6 +8,8 @@ okhttp = "5.5.1"
 jsoup = "1.24.1"
 
 [libraries]
+android-gradle = { module = "com.android.tools.build:gradle", version.ref = "android-gradle" }
+kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 hikari-source-api = { module = "app.hikari:source-api", version.ref = "hikari-source-api" }
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
@@ -21,3 +23,4 @@ injekt-core = { module = "com.github.null2264.injekt:injekt-core", version = "41
 android-application = { id = "com.android.application", version.ref = "android-gradle" }
 android-library = { id = "com.android.library", version.ref = "android-gradle" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+hikari-extension = { id = "hikari.plugins.extension" }

@@ -29,12 +29,16 @@ abstract class KeiSource : HttpSource() {
         return addInterceptor(RateLimitInterceptor(permits, period, unit))
     }
 
+    protected open fun Headers.Builder.configureHeaders(): Headers.Builder = this
+
     override fun headersBuilder(): Headers.Builder {
-        return Headers.Builder()
-            .add(
+        return super.headersBuilder()
+            .set(
                 "User-Agent",
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
             )
+            .set("Referer", "$baseUrl/")
+            .configureHeaders()
     }
 }
 
