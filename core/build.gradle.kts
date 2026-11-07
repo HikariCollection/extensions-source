@@ -30,6 +30,7 @@ dependencies {
     compileOnly(libs.jsoup)
     compileOnly(libs.kotlin.json)
     compileOnly(libs.injekt.core)
+    compileOnly(libs.androidx.preference)
     compileOnly(libs.coroutines.core)
     compileOnly(libs.coroutines.android)
 }

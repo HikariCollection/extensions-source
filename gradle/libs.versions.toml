@@ -20,6 +20,7 @@ okhttp-brotli = { module = "com.squareup.okhttp3:okhttp-brotli", version.ref = "
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 injekt-core = { module = "com.github.null2264.injekt:injekt-core", version = "4135455a2a" }
+androidx-preference = { module = "androidx.preference:preference", version = "1.2.1" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle" }

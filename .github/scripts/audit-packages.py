@@ -81,6 +81,22 @@ def audit() -> AuditResult:
         else:
             owners[suffix] = module
 
+        src_dir = build_file.parent / "src" / "main" / "kotlin" / "app" / "hikari" / "extension" / lang / name
+        if src_dir.exists():
+            kt_files = list(src_dir.glob("*.kt"))
+            normalized_slug = name.replace("-", "").replace("_", "").lower()
+            slug_match = next((f for f in kt_files if f.stem.replace("-", "").replace("_", "").lower() == normalized_slug), None)
+            if not slug_match:
+                result.errors.append(Diagnostic(
+                    f"no entry class matching slug '{name}' found in {src_dir}",
+                    file=module,
+                ))
+            elif slug_match.stem in ("Dto", "Filters", "Models", "Helper", "Utils"):
+                result.errors.append(Diagnostic(
+                    f"resolved class '{slug_match.stem}' is an auxiliary file, not an extension class",
+                    file=module,
+                ))
+
     return result
 
 

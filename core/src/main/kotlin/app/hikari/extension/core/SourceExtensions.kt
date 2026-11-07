@@ -1,12 +1,16 @@
 package app.hikari.extension.core
 
+import android.content.SharedPreferences
 import app.hikari.network.await
 import app.hikari.network.awaitSuccess
+import app.hikari.source.ConfigurableSource
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.intOrNull
 import okhttp3.CacheControl
 import okhttp3.Call
 import okhttp3.Headers
@@ -174,4 +178,14 @@ fun tryParseInstant(date: String?): Long {
             java.time.OffsetDateTime.parse(date).toInstant().toEpochMilli()
         }.getOrDefault(0L)
     }
+}
+
+val JsonElement.string: String
+    get() = (this as? JsonPrimitive)?.content ?: toString()
+
+val JsonElement.intOrNull: Int?
+    get() = (this as? JsonPrimitive)?.intOrNull
+
+inline fun ConfigurableSource.getPreferences(block: SharedPreferences.() -> Unit = {}): SharedPreferences {
+    return getSourcePreferences().apply(block)
 }

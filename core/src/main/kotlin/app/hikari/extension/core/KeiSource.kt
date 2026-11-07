@@ -26,7 +26,15 @@ abstract class KeiSource : HttpSource() {
         period: Long = 1,
         unit: TimeUnit = TimeUnit.SECONDS,
     ): OkHttpClient.Builder {
-        return addInterceptor(RateLimitInterceptor(permits, period, unit))
+        return addInterceptor(RateLimitInterceptor(permits, unit.toNanos(period)))
+    }
+
+    protected fun OkHttpClient.Builder.rateLimit(
+        permits: Int,
+        period: kotlin.time.Duration,
+        predicate: (HttpUrl) -> Boolean = { true },
+    ): OkHttpClient.Builder {
+        return addInterceptor(RateLimitInterceptor(permits, period.inWholeNanoseconds, predicate))
     }
 
     protected open fun Headers.Builder.configureHeaders(): Headers.Builder = this
@@ -44,14 +52,18 @@ abstract class KeiSource : HttpSource() {
 
 private class RateLimitInterceptor(
     private val permits: Int,
-    period: Long,
-    unit: TimeUnit,
+    periodNanos: Long,
+    private val predicate: (HttpUrl) -> Boolean = { true },
 ) : Interceptor {
-    private val requestIntervalNanos = unit.toNanos(period) / permits
+    private val requestIntervalNanos = periodNanos / permits
     private var lastRequestNanos = 0L
 
     @Synchronized
     override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        if (!predicate(request.url)) {
+            return chain.proceed(request)
+        }
         val now = System.nanoTime()
         val elapsed = now - lastRequestNanos
         if (elapsed < requestIntervalNanos) {
@@ -61,6 +73,6 @@ private class RateLimitInterceptor(
             }
         }
         lastRequestNanos = System.nanoTime()
-        return chain.proceed(chain.request())
+        return chain.proceed(request)
     }
 }

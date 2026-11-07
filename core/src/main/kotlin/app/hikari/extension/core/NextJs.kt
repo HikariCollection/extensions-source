@@ -28,7 +28,11 @@ private fun <T> extractValueNextJs(
 ): T? {
     if (payload !is JsonObject && payload !is JsonArray) return null
     if (predicate(payload)) {
-        return jsonInstance.decodeFromJsonElement(deserializer, payload)
+        try {
+            return jsonInstance.decodeFromJsonElement(deserializer, payload)
+        } catch (_: Exception) {
+            // Continue searching children if decoding fails
+        }
     }
     val children: Iterable<JsonElement> = when (payload) {
         is JsonObject -> payload.values
@@ -295,11 +299,11 @@ fun <T> Document.extractNextJs(
 }
 
 inline fun <reified T> Document.extractNextJs(
-    noinline predicate: (JsonElement) -> Boolean,
+    noinline predicate: (JsonElement) -> Boolean = { true },
 ): T? = extractNextJs(predicate, serializer<T>())
 
 fun <T> String.extractNextJsRsc(
-    predicate: (JsonElement) -> Boolean,
+    predicate: (JsonElement) -> Boolean = { true },
     deserializer: DeserializationStrategy<T>,
 ): T? {
     val chunkCache = mutableMapOf<String, String>()
@@ -313,11 +317,11 @@ fun <T> String.extractNextJsRsc(
 }
 
 inline fun <reified T> String.extractNextJsRsc(
-    noinline predicate: (JsonElement) -> Boolean,
+    noinline predicate: (JsonElement) -> Boolean = { true },
 ): T? = extractNextJsRsc(predicate, serializer<T>())
 
 fun <T> Response.extractNextJs(
-    predicate: (JsonElement) -> Boolean,
+    predicate: (JsonElement) -> Boolean = { true },
     deserializer: DeserializationStrategy<T>,
 ): T? {
     val contentType = header("Content-Type") ?: ""
@@ -331,5 +335,5 @@ fun <T> Response.extractNextJs(
 }
 
 inline fun <reified T> Response.extractNextJs(
-    noinline predicate: (JsonElement) -> Boolean,
+    noinline predicate: (JsonElement) -> Boolean = { true },
 ): T? = extractNextJs(predicate, serializer<T>())

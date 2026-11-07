@@ -108,6 +108,7 @@ class HikariExtensionPlugin : Plugin<Project> {
             add("compileOnly", libs.findLibrary("jsoup").get())
             add("compileOnly", libs.findLibrary("kotlin-json").get())
             add("compileOnly", libs.findLibrary("injekt-core").get())
+            add("compileOnly", libs.findLibrary("androidx-preference").get())
             add("compileOnly", libs.findLibrary("coroutines-core").get())
             add("compileOnly", libs.findLibrary("coroutines-android").get())
         }
@@ -135,8 +136,32 @@ class HikariExtensionPlugin : Plugin<Project> {
         val classNameProvider = hikari.extensionClass.orElse(
             providers.provider {
                 val srcDir = project.file("src/main/kotlin/app/hikari/extension/$lang/$slug")
-                val mainFile = srcDir.listFiles { _, name -> name.endsWith(".kt") && name != "Filters.kt" }?.firstOrNull()
-                val simpleName = mainFile?.nameWithoutExtension ?: slug.replaceFirstChar { it.uppercase() }
+                val ktFiles = srcDir.listFiles { _, name -> name.endsWith(".kt") } ?: emptyArray()
+                val normalizedSlug = slug.replace("-", "").replace("_", "")
+
+                // Priority 1: File matching slug case-insensitively
+                val slugMatch = ktFiles.firstOrNull {
+                    it.nameWithoutExtension.replace("-", "").replace("_", "").equals(normalizedSlug, ignoreCase = true)
+                }
+
+                // Priority 2: File containing a class extending a known Source base class
+                val sourceClassRegex = Regex("""(?:class|object)\s+([A-Za-z0-9_]+)\s*(?:\([^)]*\))?\s*:\s*(?:[A-Za-z0-9_.]*Source|MangaThemesia|Madara|NatsuId|MangaTaro)""")
+                val classMatch = if (slugMatch == null) {
+                    ktFiles.firstNotNullOfOrNull { file ->
+                        sourceClassRegex.find(file.readText())?.groupValues?.get(1)
+                    }
+                } else null
+
+                // Priority 3: First file not matching known utility file names
+                val fallbackFile = ktFiles.firstOrNull {
+                    it.nameWithoutExtension !in setOf("Dto", "Filters", "Models", "Helper", "Utils")
+                }
+
+                val simpleName = slugMatch?.nameWithoutExtension
+                    ?: classMatch
+                    ?: fallbackFile?.nameWithoutExtension
+                    ?: slug.replaceFirstChar { it.uppercase() }
+
                 "$fullPackageName.$simpleName"
             },
         ).map {
