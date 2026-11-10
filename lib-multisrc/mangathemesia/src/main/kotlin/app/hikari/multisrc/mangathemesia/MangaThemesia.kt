@@ -193,12 +193,12 @@ abstract class MangaThemesia(
             "artist",
             "Artiste",
             "Artista",
-            "Ø§Ù„Ø±Ø³Ø§Ù…",
-            "Ø§Ù„Ù†Ø§Ø´Ø±",
-            "Ä°llÃ¼stratÃ¶r",
-            "Ã‡izer",
-            "SanatÃ§Ä±",
-            "à¸™à¸±à¸à¸§à¸²à¸”",
+            "الرسام",
+            "الناشر",
+            "İllüstratör",
+            "Çizer",
+            "Sanatçı",
+            "นักวาด",
         ),
     )
     open val seriesAuthorSelector = selector(
@@ -207,23 +207,23 @@ abstract class MangaThemesia(
             "Author",
             "Auteur",
             "autor",
-            "Ø§Ù„Ù…Ø¤Ù„Ù",
+            "المؤلف",
             "Mangaka",
             "seniman",
             "Pengarang",
             "Yazar",
-            "à¸œà¸¹à¹‰à¹à¸•à¹ˆà¸‡",
-            "à¸™à¸±à¸à¹€à¸‚à¸µà¸¢à¸™",
+            "ผู้แต่ง",
+            "นักเขียน",
         ),
     )
     open val seriesDescriptionSelector = ".desc, .entry-content[itemprop=description]"
     open val seriesAltNameSelector = ".alternative, .wd-full:contains(alt) span, .alter, .seriestualt, " +
-        selector(".infotable tr:contains(%s) td:last-child", listOf("Alternative", "Alternatif", "Ø§Ù„Ø£Ø³Ù…Ø§Ø¡ Ø§Ù„Ø«Ø§Ù†ÙˆÙŠØ©"))
+        selector(".infotable tr:contains(%s) td:last-child", listOf("Alternative", "Alternatif", "الأسماء الثانوية"))
     open val seriesGenreSelector = "div.gnr a, .mgen a, .seriestugenre a, " +
-        selector("span:contains(%s)", listOf("genre", "Ø§Ù„ØªØµÙ†ÙŠÙ"))
+        selector("span:contains(%s)", listOf("genre", "التصنيف"))
     open val seriesTypeSelector = selector(
         ".infotable tr:contains(%s) td:last-child, .tsinfo .imptdt:contains(%s) i, .tsinfo .imptdt:contains(%s) a, .fmed b:contains(%s)+span, span:contains(%s) a",
-        listOf("type", "à¸›à¸£à¸°à¹€à¸ à¸—", "Ø§Ù„Ù†ÙˆØ¹", "tipe", "TÃ¼rÃ¼"),
+        listOf("type", "ประเภท", "النوع", "tipe", "Türü"),
     ) + ", a[href*=type\\=]"
     open val seriesStatusSelector = selector(
         ".infotable tr:contains(%s) td:last-child, .tsinfo .imptdt:contains(%s) i, .fmed b:contains(%s)+span span:contains(%s)",
@@ -231,13 +231,13 @@ abstract class MangaThemesia(
             "status",
             "Statut",
             "Durum",
-            "é€£è¼‰çŠ¶æ³",
+            "連載状況",
             "Estado",
-            "Ø§Ù„Ø­Ø§Ù„Ø©",
-            "Ø­Ø§Ù„Ø© Ø§Ù„Ø¹Ù…Ù„",
-            "à¸ªà¸–à¸²à¸™à¸°",
+            "الحالة",
+            "حالة العمل",
+            "สถานะ",
             "stato",
-            "StatÃ¼sÃ¼",
+            "Statüsü",
         ),
     )
     open val seriesThumbnailSelector = ".infomanga > div[itemprop=image] img, .thumb img"
@@ -278,17 +278,17 @@ abstract class MangaThemesia(
     open fun String?.parseStatus(): Int = when {
         this == null -> SManga.UNKNOWN
         listOf(
-            "Ù…Ø³ØªÙ…Ø±Ø©", "en curso", "ongoing", "on going", "new season", "mass released", "ativo",
-            "en cours", "en cours de publication", "Ä‘ang tiáº¿n hÃ nh", "em lanÃ§amento", "Ð¾Ð½Ð³Ð¾Ñ–Ð½Ð³",
-            "publishing", "devam ediyor", "em andamento", "in corso", "gÃ¼ncel", "berjalan",
-            "Ð¿Ñ€Ð¾Ð´Ð¾Ð»Ð¶Ð°ÐµÑ‚ÑÑ", "updating", "lanÃ§ando", "in arrivo", "emision", "en emision",
-            "Ù…Ø³ØªÙ…Ø±", "curso", "en marcha", "publicandose", "publicando", "è¿žè½½ä¸­", "devam etmekte", "é€£è¼‰ä¸­",
+            "مستمرة", "en curso", "ongoing", "on going", "new season", "mass released", "ativo",
+            "en cours", "en cours de publication", "đang tiến hành", "em lançamento", "онгоінг",
+            "publishing", "devam ediyor", "em andamento", "in corso", "güncel", "berjalan",
+            "продолжается", "updating", "lançando", "in arrivo", "emision", "en emision",
+            "مستمر", "curso", "en marcha", "publicandose", "publicando", "连载中", "devam etmekte", "連載中",
         ).any { this.contains(it, ignoreCase = true) } -> SManga.ONGOING
         listOf(
-            "completed", "completo", "complÃ©tÃ©", "fini", "achevÃ©", "terminÃ©", "tamamlandÄ±",
-            "Ä‘Ã£ hoÃ n thÃ nh", "hoÃ n thÃ nh", "Ù…ÙƒØªÙ…Ù„Ø©", "Ð·Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ð¾", "finished", "finalizad",
-            "completata", "one-shot", "bitti", "tamat", "completado", "concluÃ­do", "å®Œçµ",
-            "concluido", "å·²å®Œç»“", "bitmiÅŸ",
+            "completed", "completo", "complété", "fini", "achevé", "terminé", "tamamlandı",
+            "đã hoàn thành", "hoàn thành", "مكتملة", "завершено", "finished", "finalizad",
+            "completata", "one-shot", "bitti", "tamat", "completado", "concluído", "完結",
+            "concluido", "已完结", "bitmiş",
         ).any { this.contains(it, ignoreCase = true) } -> SManga.COMPLETED
         listOf(
             "canceled",
@@ -298,7 +298,7 @@ abstract class MangaThemesia(
             "cancelados",
             "dropped",
             "discontinued",
-            "abandonnÃ©",
+            "abandonné",
         ).any { this.contains(it, ignoreCase = true) } -> SManga.CANCELLED
         listOf(
             "hiatus",
@@ -556,7 +556,7 @@ abstract class MangaThemesia(
             """(?:post_id["']?\s*:\s*|ts_dynamic_ajax_view\D*|tsUpdateView\D*)(\d+)""".toRegex()
         private val CHAPTER_PAGE_ID_REGEX = "chapter_id\\s*=\\s*(\\d+);".toRegex()
         val JSON_IMAGE_LIST_REGEX = """["']?(?:images|imageUrls)["']?\s*[:=]\s*(\[.*?])""".toRegex()
-        private val ALT_NAME_SEPARATOR = Regex("""[|/â€¢,;]""")
+        private val ALT_NAME_SEPARATOR = Regex("""[|/•,;]""")
         private val IMAGE_EXTENSION_REGEX = Regex("""\.(?:webp|jpe?g|png|gif)""", RegexOption.IGNORE_CASE)
     }
 }

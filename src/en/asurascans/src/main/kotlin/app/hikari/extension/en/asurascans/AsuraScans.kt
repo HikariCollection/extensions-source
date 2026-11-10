@@ -8,6 +8,7 @@ import android.graphics.Rect
 import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
 import app.hikari.extension.core.KeiSource
+import app.hikari.extension.core.UriFilter
 import app.hikari.extension.core.asJsoup
 import app.hikari.extension.core.get
 import app.hikari.extension.core.getPreferences

@@ -1,6 +1,7 @@
 package app.hikari.extension.id.wurmz
 
 import app.hikari.extension.core.KeiSource
+import app.hikari.extension.core.UriFilter
 import app.hikari.extension.core.asJsoup
 import app.hikari.extension.core.extractNextJs
 import app.hikari.extension.core.extractNextJsRsc
@@ -57,24 +58,8 @@ class Wurmz : KeiSource() {
             if (page > 1) {
                 addQueryParameter("page", page.toString())
             }
-            filters.forEach { filter ->
-                when (filter) {
-                    is SortFilter -> addQueryParameter("sort", filter.toUriPart())
-                    is TypeFilter -> if (filter.toUriPart().isNotEmpty()) addQueryParameter("type", filter.toUriPart())
-                    is StatusFilter -> if (filter.toUriPart().isNotEmpty()) {
-                        addQueryParameter(
-                            "status",
-                            filter.toUriPart(),
-                        )
-                    }
-                    is GenreFilter -> if (filter.toUriPart().isNotEmpty()) {
-                        addQueryParameter(
-                            "genre",
-                            filter.toUriPart(),
-                        )
-                    }
-                    else -> {}
-                }
+            filters.filterIsInstance<UriFilter>().forEach {
+                it.addToUri(this)
             }
         }.build()
 

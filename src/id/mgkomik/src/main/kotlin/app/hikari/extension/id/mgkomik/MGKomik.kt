@@ -1,6 +1,7 @@
 package app.hikari.extension.id.mgkomik
 
 import app.hikari.extension.core.KeiSource
+import app.hikari.extension.core.UriFilter
 import app.hikari.extension.core.asJsoup
 import app.hikari.extension.core.get
 import app.hikari.network.GET
@@ -74,38 +75,8 @@ class MGKomik : KeiSource() {
             if (query.isNotBlank()) {
                 addQueryParameter("q", query)
             }
-            filters.forEach { filter ->
-                when (filter) {
-                    is SortFilter -> {
-                        val value = filter.getValue()
-                        if (value.isNotBlank() && value != "relevance") {
-                            addQueryParameter("order_by", value)
-                        }
-                    }
-                    is StatusFilter -> {
-                        val value = filter.getValue()
-                        if (value.isNotBlank()) {
-                            addQueryParameter("status", value)
-                        }
-                    }
-                    is OperatorFilter -> {
-                        val value = filter.getValue()
-                        if (value.isNotBlank()) {
-                            addQueryParameter("op", value)
-                        }
-                    }
-                    is TypeFilter -> {
-                        filter.state.filter { it.state }.forEach {
-                            addQueryParameter("types[]", it.value)
-                        }
-                    }
-                    is GenreFilter -> {
-                        filter.state.filter { it.state }.forEach {
-                            addQueryParameter("genres[]", it.value)
-                        }
-                    }
-                    else -> {}
-                }
+            filters.filterIsInstance<UriFilter>().forEach {
+                it.addToUri(this)
             }
             addQueryParameter("page", page.toString())
         }.build()

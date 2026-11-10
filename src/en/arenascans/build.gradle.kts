@@ -5,7 +5,7 @@ plugins {
 hikari {
     name.set("Arena Scans")
     versionCode.set(1)
-    libVersion.set("1.1")
+    theme.set("mangathemesia")
     contentWarning.set(ContentWarning.MIXED)
 
     source {

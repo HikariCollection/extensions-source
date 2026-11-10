@@ -1,4 +1,6 @@
-package app.hikari.extension.core
+package app.hikari.multisrc.mangataro
+
+import app.hikari.extension.core.*
 
 import android.util.Log
 import app.hikari.network.HttpException
@@ -35,7 +37,13 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
 
-abstract class MangaTaro : KeiSource() {
+abstract class MangaTaro(
+    override val name: String = "",
+    override val baseUrl: String = "",
+    override val lang: String = "",
+) : KeiSource() {
+
+    override val supportsLatest: Boolean = true
 
     override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder = rateLimit(3)
 

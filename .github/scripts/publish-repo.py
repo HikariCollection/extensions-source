@@ -1,176 +1,237 @@
+#!/usr/bin/env python3
+import argparse
 import gzip
-import hashlib
-import html
 import json
-import math
+import shutil
 import sys
-import time
 from pathlib import Path
 
-import index_pb2
-from github_utils import REPO_NAME, run_gh
-from google.protobuf import json_format
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+RAW_BASE = "https://raw.githubusercontent.com/HikariCollection/extensions/repo"
+SIGNING_KEY = "956e72c8d1dc56c663b07c09d537e10614c25620650015b0f3e22a3d3a2e2e32"
 
-ARTIFACTS_DIR = Path.home() / "apk-artifacts"
-REPO_DIR = Path.cwd()
-
-ICON_BASE_URL = "https://cdn.jsdelivr.net/gh/HikariCollection/extensions-source@main"
-RELEASE_BASE_URL = f"https://github.com/{REPO_NAME}/releases/download"
-ASSET_LIMIT = 495
-UPLOAD_CHUNK_SIZE = 80
-UPLOAD_CHUNK_INTERVAL = 30
-
-to_delete: list[str] = json.loads(sys.argv[1]) if len(sys.argv) > 1 else []
-current_sha = sys.argv[2] if len(sys.argv) > 2 else ""
-current_sha_short = current_sha[:7]
-full_rebuild = (sys.argv[3] == "true") if len(sys.argv) > 3 else True
-
-index_json_path = REPO_DIR / "index.json"
-if index_json_path.exists():
-    with index_json_path.open() as f:
-        remote_proto = json_format.Parse(f.read(), index_pb2.Index())
-else:
-    remote_proto = index_pb2.Index()
-
-remote_extensions = {
-    ext.packageName: ext for ext in remote_proto.extensionList.extensions
+CONTENT_WARNING_MAP = {
+    "SAFE": 1,
+    "MIXED": 2,
+    "NSFW": 3,
 }
 
-release_assets_path = REPO_DIR / "release-assets.json"
-if release_assets_path.exists():
-    with release_assets_path.open() as f:
-        release_assets = json.load(f)
-else:
-    release_assets = {}
 
-updated_release_assets = {
-    package_name: assets
-    for package_name, assets in release_assets.items()
-    if not full_rebuild
-    and not any(package_name.endswith(f".{module}") for module in to_delete)
-}
-
-new_extensions: list[tuple[index_pb2.Extension, Path, Path, bool]] = []
-
-SOURCE_DIR = Path(__file__).resolve().parents[2]
-ICON_FILE = "res/mipmap-xhdpi/ic_launcher.png"
-
-
-def get_icon_url(module: str, theme: str | None) -> str:
-    module_icon = f"src/{module.replace('.', '/')}/{ICON_FILE}"
-    if (SOURCE_DIR / module_icon).exists():
-        return f"{ICON_BASE_URL}/{module_icon}"
-    return f"{ICON_BASE_URL}/core/src/main/{ICON_FILE}"
-
-
-for info_file in ARTIFACTS_DIR.glob("**/hikari-source-info.json"):
-    with info_file.open(encoding="utf-8") as f:
-        info = json.load(f)
-    package_name = info["packageName"]
-    apk = next((info_file.parent / "outputs/apk/release").glob("*.apk"), None)
-    if apk is None:
-        continue
-
-    jar = next((info_file.parent / "outputs/jar/release").glob("*.jar"), apk)
-
-    content_hash = info.get("contentHash", "")
-    remote_ext = remote_extensions.get(package_name)
-    changed = (
-        remote_ext is None
-        or remote_ext.versionCode != info["versionCode"]
-        or release_assets.get(package_name) != content_hash
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Publish built extensions and generate repo index files."
     )
-
-    updated_release_assets[package_name] = content_hash
-
-    ext = index_pb2.Extension(
-        name=info["name"],
-        packageName=package_name,
-        resources=index_pb2.Resources(
-            iconUrl=get_icon_url(info.get("module", package_name.removeprefix("app.hikari.extension.")), None),
-        ),
-        extensionLib=info["extensionLib"],
-        versionCode=info["versionCode"],
-        versionName=info["versionName"],
-        contentWarning=1 if info["contentWarning"] == "SAFE" else (2 if info["contentWarning"] == "MIXED" else 3),
-        sources=[
-            index_pb2.Source(
-                id=int(source["id"]),
-                name=source["name"],
-                language=source["lang"],
-                homeUrl=source["baseUrl"],
-                mirrorUrls=source.get("mirrorUrls", []),
-            )
-            for source in info["sources"]
-        ],
+    parser.add_argument(
+        "--delete",
+        default="[]",
+        help="JSON list of module suffixes to replace or remove.",
     )
-    new_extensions.append((ext, apk, jar, changed))
+    parser.add_argument(
+        "--full-rebuild",
+        default="false",
+        help="Whether this is a full rebuild ('true' or 'false').",
+    )
+    parser.add_argument(
+        "--artifacts-dir",
+        type=Path,
+        default=BASE_DIR / "apk-artifacts",
+        help="Directory containing downloaded chunk artifacts.",
+    )
+    parser.add_argument(
+        "--repo-dir",
+        type=Path,
+        default=BASE_DIR / "repo",
+        help="Target repo output directory.",
+    )
+    return parser.parse_args()
 
-new_extensions.sort(key=lambda item: item[0].packageName)
 
-changed_extensions = [item for item in new_extensions if item[3]]
-total_changed_extensions = len(changed_extensions)
-release_count = (
-    math.ceil(total_changed_extensions / ASSET_LIMIT)
-    if total_changed_extensions
-    else 0
-)
-ext_per_release = (
-    math.ceil(total_changed_extensions / release_count) if release_count else 0
-)
+def load_existing_extensions(index_path: Path) -> dict[str, dict]:
+    if not index_path.is_file():
+        return {}
+    with index_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    extensions = data.get("extensionList", {}).get("extensions", [])
+    return {ext["packageName"]: ext for ext in extensions if "packageName" in ext}
 
 
-def get_release_tag(batch_index: int) -> str:
-    return (
-        f"{current_sha_short}-{batch_index}" if release_count > 1 else current_sha_short
+def matches_module(package_name: str, module: str) -> bool:
+    return package_name == f"app.hikari.extension.{module}" or package_name.endswith(
+        f".{module}"
     )
 
 
-changed_index = 0
-for ext, apk, jar, changed in new_extensions:
-    if changed:
-        tag = get_release_tag(changed_index // ext_per_release)
-        ext.resources.apkUrl = f"{RELEASE_BASE_URL}/{tag}/{apk.name}"
-        ext.resources.jarUrl = f"{RELEASE_BASE_URL}/{tag}/{jar.name}"
-        changed_index += 1
-    elif ext.packageName in remote_extensions:
-        old_resources = remote_extensions[ext.packageName].resources
-        ext.resources.apkUrl = old_resources.apkUrl
-        ext.resources.jarUrl = old_resources.jarUrl
-
-final_extensions = []
-final_extensions.extend(
-    ext
-    for ext in remote_proto.extensionList.extensions
-    if not full_rebuild
-    and not any(ext.packageName.endswith(f".{module}") for module in to_delete)
-)
-final_extensions.extend(ext for ext, _, _, _ in new_extensions)
-final_extensions.sort(key=lambda ext: ext.packageName)
-
-index = index_pb2.Index(
-    name="Hikari Extensions",
-    badgeLabel="Official",
-    signingKey="956e72c8d1dc56c663b07c09d537e10614c25620650015b0f3e22a3d3a2e2e32",
-    contact=index_pb2.Contact(
-        website="https://github.com/HikariCollection",
-        discord=None,
-    ),
-    extensionList=index_pb2.ExtensionList(extensions=final_extensions),
-)
-
-with REPO_DIR.joinpath("index.json").open("w", encoding="utf-8") as f:
-    f.write(
-        json_format.MessageToJson(
-            index,
-            always_print_fields_with_no_presence=False,
-            preserving_proto_field_name=True,
+def write_protobuf_index(repo_dir: Path, final_extensions: list[dict]) -> None:
+    try:
+        import index_pb2
+    except ImportError as exc:
+        print(
+            f"Error: Failed to import index_pb2 / protobuf ({exc}). "
+            "Install 'protobuf' before running publish-repo.py.",
+            file=sys.stderr,
         )
+        sys.exit(1)
+
+    pb_extensions = [
+        index_pb2.Extension(
+            name=ext["name"],
+            packageName=ext["packageName"],
+            resources=index_pb2.Resources(
+                apkUrl=ext["resources"]["apkUrl"],
+                iconUrl=ext["resources"]["iconUrl"],
+            ),
+            extensionLib=ext["extensionLib"],
+            versionCode=int(ext["versionCode"]),
+            versionName=ext["versionName"],
+            contentWarning=CONTENT_WARNING_MAP.get(ext.get("contentWarning", "SAFE"), 1),
+            sources=[
+                index_pb2.Source(
+                    id=int(source["id"]),
+                    name=source["name"],
+                    language=source["language"],
+                    homeUrl=source["homeUrl"],
+                    mirrorUrls=source.get("mirrorUrls", []),
+                    message=source.get("message"),
+                )
+                for source in ext.get("sources", [])
+            ],
+        )
+        for ext in final_extensions
+    ]
+
+    pb_index = index_pb2.Index(
+        name="Hikari Extensions",
+        badgeLabel="Official",
+        signingKey=SIGNING_KEY,
+        contact=index_pb2.Contact(
+            website="https://github.com/HikariCollection",
+            discord=None,
+        ),
+        extensionList=index_pb2.ExtensionList(extensions=pb_extensions),
     )
 
-with REPO_DIR.joinpath("index.pb").open("wb") as f:
-    f.write(gzip.compress(index.SerializeToString(deterministic=True), mtime=0))
+    with (repo_dir / "index.pb").open("wb") as f:
+        f.write(gzip.compress(pb_index.SerializeToString(deterministic=True), mtime=0))
 
-with release_assets_path.open("w", encoding="utf-8") as f:
-    json.dump(updated_release_assets, f, indent=2, sort_keys=True)
-    f.write("\n")
+
+def main() -> None:
+    args = parse_args()
+    to_delete: list[str] = json.loads(args.delete)
+    full_rebuild = args.full_rebuild.lower() == "true"
+    artifacts_dir: Path = args.artifacts_dir
+    repo_dir: Path = args.repo_dir
+    apk_dir = repo_dir / "apk"
+    icon_dir = repo_dir / "icon"
+
+    if full_rebuild:
+        if apk_dir.exists():
+            shutil.rmtree(apk_dir)
+        if icon_dir.exists():
+            shutil.rmtree(icon_dir)
+        existing_extensions: dict[str, dict] = {}
+    else:
+        existing_extensions = load_existing_extensions(repo_dir / "index.json")
+
+    apk_dir.mkdir(parents=True, exist_ok=True)
+    icon_dir.mkdir(parents=True, exist_ok=True)
+
+    removed_entries: list[dict] = []
+    if not full_rebuild and to_delete:
+        for pkg_name in list(existing_extensions.keys()):
+            if any(matches_module(pkg_name, mod) for mod in to_delete):
+                removed_entries.append(existing_extensions.pop(pkg_name))
+
+    rebuilt_packages: set[str] = set()
+    if artifacts_dir.exists():
+        info_files = sorted(artifacts_dir.rglob("hikari-source-info.json"))
+    else:
+        info_files = []
+
+    for info_file in info_files:
+        with info_file.open("r", encoding="utf-8") as f:
+            info = json.load(f)
+
+        package_name = info["packageName"]
+        apk_name = info["apkFileName"]
+        icon_name = info["iconFileName"]
+
+        apk_src = info_file.parent / apk_name
+        if not apk_src.is_file():
+            apk_src = info_file.parent / "outputs" / "apk" / "release" / apk_name
+        if apk_src.is_file():
+            shutil.copy2(apk_src, apk_dir / apk_name)
+
+        icon_src = info_file.parent / icon_name
+        if icon_src.is_file():
+            shutil.copy2(icon_src, icon_dir / icon_name)
+
+        sources_data = [
+            {
+                "id": int(s["id"]),
+                "name": s["name"],
+                "language": s["lang"],
+                "homeUrl": s["baseUrl"],
+                "mirrorUrls": s.get("mirrorUrls", []),
+                "message": None,
+            }
+            for s in info.get("sources", [])
+        ]
+
+        existing_extensions[package_name] = {
+            "name": info["name"],
+            "packageName": package_name,
+            "resources": {
+                "apkUrl": f"{RAW_BASE}/apk/{apk_name}",
+                "iconUrl": f"{RAW_BASE}/icon/{icon_name}",
+            },
+            "extensionLib": info.get("extensionLib", "1.1"),
+            "versionCode": int(info.get("versionCode", 1)),
+            "versionName": info.get("versionName", "1.1.1"),
+            "contentWarning": info.get("contentWarning", "SAFE"),
+            "sources": sources_data,
+        }
+        rebuilt_packages.add(package_name)
+
+    for removed in removed_entries:
+        if removed["packageName"] not in rebuilt_packages:
+            old_apk = removed.get("resources", {}).get("apkUrl", "").rsplit("/", 1)[-1]
+            old_icon = removed.get("resources", {}).get("iconUrl", "").rsplit("/", 1)[-1]
+            if old_apk and (apk_dir / old_apk).is_file():
+                (apk_dir / old_apk).unlink()
+            if old_icon and (icon_dir / old_icon).is_file():
+                (icon_dir / old_icon).unlink()
+
+    final_extensions = sorted(
+        existing_extensions.values(), key=lambda x: x["name"].lower()
+    )
+
+    index_data = {
+        "name": "Hikari Extensions",
+        "badgeLabel": "Official",
+        "signingKey": SIGNING_KEY,
+        "contact": {
+            "website": "https://github.com/HikariCollection",
+            "discord": None,
+        },
+        "extensionList": {
+            "extensions": final_extensions,
+        },
+        "extensionListUrl": None,
+    }
+
+    with (repo_dir / "index.json").open("w", encoding="utf-8") as f:
+        json.dump(index_data, f, indent=2)
+
+    with (repo_dir / "index.min.json").open("w", encoding="utf-8") as f:
+        json.dump(index_data, f, separators=(",", ":"))
+
+    write_protobuf_index(repo_dir, final_extensions)
+
+    print(
+        f"Published {len(rebuilt_packages)} updated/new extension(s); "
+        f"total {len(final_extensions)} extension(s) in {repo_dir}"
+    )
+
+
+if __name__ == "__main__":
+    main()

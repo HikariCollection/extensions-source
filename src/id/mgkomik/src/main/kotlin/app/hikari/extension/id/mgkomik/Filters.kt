@@ -1,16 +1,24 @@
 package app.hikari.extension.id.mgkomik
 
-import app.hikari.source.model.Filter
+import app.hikari.extension.core.UriMultiSelectFilter
+import app.hikari.extension.core.UriPartFilter
+import okhttp3.HttpUrl
 
 class SortFilter :
-    Filter.Select<String>(
+    UriPartFilter(
         "Urutkan",
-        SORT_OPTIONS.map { it.first }.toTypedArray(),
+        "order_by",
+        SORT_OPTIONS,
     ) {
-    fun getValue() = SORT_OPTIONS[state].second
+    override fun addToUri(builder: HttpUrl.Builder) {
+        val value = getValue()
+        if (value.isNotBlank() && value != "relevance") {
+            builder.addQueryParameter("order_by", value)
+        }
+    }
 
     companion object {
-        private val SORT_OPTIONS = listOf(
+        private val SORT_OPTIONS = arrayOf(
             Pair("Relevance", "relevance"),
             Pair("Latest", "latest"),
             Pair("A-Z", "alphabet"),
@@ -21,14 +29,13 @@ class SortFilter :
 }
 
 class StatusFilter :
-    Filter.Select<String>(
+    UriPartFilter(
         "Status",
-        STATUS_OPTIONS.map { it.first }.toTypedArray(),
+        "status",
+        STATUS_OPTIONS,
     ) {
-    fun getValue() = STATUS_OPTIONS[state].second
-
     companion object {
-        private val STATUS_OPTIONS = listOf(
+        private val STATUS_OPTIONS = arrayOf(
             Pair("Semua", ""),
             Pair("Ongoing", "on-going"),
             Pair("Completed", "end"),
@@ -38,14 +45,13 @@ class StatusFilter :
 }
 
 class OperatorFilter :
-    Filter.Select<String>(
+    UriPartFilter(
         "Cocokan Genre",
-        OPERATOR_OPTIONS.map { it.first }.toTypedArray(),
+        "op",
+        OPERATOR_OPTIONS,
     ) {
-    fun getValue() = OPERATOR_OPTIONS[state].second
-
     companion object {
-        private val OPERATOR_OPTIONS = listOf(
+        private val OPERATOR_OPTIONS = arrayOf(
             Pair("Match ANY", ""),
             Pair("Match ALL", "1"),
         )
@@ -53,26 +59,30 @@ class OperatorFilter :
 }
 
 class TypeFilter :
-    Filter.Group<TypeCheckBox>(
+    UriMultiSelectFilter(
         "Tipe",
-        listOf(
-            TypeCheckBox("Manga", "manga"),
-            TypeCheckBox("Manhua", "manhua"),
-            TypeCheckBox("Manhwa", "manhwa"),
-        ),
-    )
-
-class TypeCheckBox(name: String, val value: String) : Filter.CheckBox(name)
+        "types[]",
+        TYPE_OPTIONS,
+        joinWithComma = false,
+    ) {
+    companion object {
+        private val TYPE_OPTIONS = arrayOf(
+            Pair("Manga", "manga"),
+            Pair("Manhua", "manhua"),
+            Pair("Manhwa", "manhwa"),
+        )
+    }
+}
 
 class GenreFilter :
-    Filter.Group<GenreCheckBox>(
+    UriMultiSelectFilter(
         "Genre",
-        GENRE_LIST.map { GenreCheckBox(it.first, it.second) },
+        "genres[]",
+        GENRE_LIST,
+        joinWithComma = false,
     )
 
-class GenreCheckBox(name: String, val value: String) : Filter.CheckBox(name)
-
-private val GENRE_LIST = listOf(
+private val GENRE_LIST = arrayOf(
     Pair("Action", "action"),
     Pair("Adaptation", "adaptation"),
     Pair("Adult", "adult"),

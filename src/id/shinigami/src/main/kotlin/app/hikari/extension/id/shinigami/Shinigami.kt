@@ -1,6 +1,7 @@
 package app.hikari.extension.id.shinigami
 
 import app.hikari.extension.core.KeiSource
+import app.hikari.extension.core.UriFilter
 import app.hikari.extension.core.get
 import app.hikari.extension.core.parseAs
 import app.hikari.extension.core.tryParseInstant

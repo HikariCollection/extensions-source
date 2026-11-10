@@ -4,14 +4,59 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
+    inputs:
+      full_rebuild:
+        description: 'Force full rebuild of all extensions'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrices.outputs.matrix }}
+      has_work: ${{ steps.matrices.outputs.has_work }}
+      has_delete: ${{ steps.matrices.outputs.has_delete }}
+      delete: ${{ steps.matrices.outputs.delete }}
+      full_rebuild: ${{ steps.matrices.outputs.full_rebuild }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Audit package names
+        run: python3 .github/scripts/audit-packages.py
+
+      - name: Generate build matrices
+        id: matrices
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FULL_REBUILD: ${{ inputs.full_rebuild == true }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA=$(python3 .github/scripts/find-base-sha.py "build_push.yml")
+          fi
+          python3 .github/scripts/generate-build-matrices.py "$BASE_SHA"
+
   build:
+    needs: prepare
+    if: needs.prepare.outputs.has_work == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-latest
 
     steps:
@@ -31,6 +76,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Restore signing key
+        if: github.event_name != 'pull_request'
         env:
           SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY_BASE64 }}
         run: |
@@ -38,18 +84,68 @@ jobs:
             echo "$SIGNING_KEY_BASE64" | base64 -d > signingkey.jks
           fi
 
-      - name: Audit package names
-        run: python3 .github/scripts/audit-packages.py
-
       - name: Build release extension APKs
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew ${{ matrix.chunk.tasks }} --no-daemon
+
+      - name: Stage chunk artifacts
+        if: github.event_name != 'pull_request'
+        run: python3 .github/scripts/collect-artifacts.py '${{ toJson(matrix.chunk.modules) }}'
+
+      - name: Upload chunk artifacts
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-artifacts-${{ matrix.chunk.number }}
+          path: staging/
+          if-no-files-found: error
+
+  publish:
+    name: Publish extension repo
+    needs: [prepare, build]
+    if: >-
+      always() &&
+      needs.prepare.result == 'success' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+      (needs.prepare.outputs.has_work == 'true' || needs.prepare.outputs.has_delete == 'true') &&
+      github.event_name != 'pull_request' &&
+      github.repository == 'HikariCollection/extensions-source' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+
+      - name: Checkout existing repo branch
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: HikariCollection/extensions
+          ref: repo
+          path: repo
+          token: ${{ secrets.EXTENSIONS_REPO_TOKEN }}
+
+      - name: Download built artifacts
+        if: needs.prepare.outputs.has_work == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: apk-artifacts-*
+          merge-multiple: true
+          path: apk-artifacts
+
+      - name: Install Python dependencies
+        run: pip install protobuf
 
       - name: Generate extension repository index
-        run: python3 .github/scripts/generate_repo.py
+        run: |
+          python3 .github/scripts/publish-repo.py \
+            --delete '${{ needs.prepare.outputs.delete }}' \
+            --full-rebuild '${{ needs.prepare.outputs.full_rebuild }}' \
+            --artifacts-dir apk-artifacts \
+            --repo-dir repo
 
       - name: Deploy to HikariCollection/extensions (repo branch)
         uses: peaceiris/actions-gh-pages@v4
-        if: github.repository == 'HikariCollection/extensions-source' && github.ref == 'refs/heads/main'
         with:
           personal_token: ${{ secrets.EXTENSIONS_REPO_TOKEN }}
           external_repository: HikariCollection/extensions

@@ -6,11 +6,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-EXTENSION_REGEX = re.compile(r"^src/(?P<lang>\w+)/(?P<extension>\w+)")
-MODULE_REGEX = re.compile(r"^:src:(?P<lang>\w+):(?P<extension>\w+)$")
+EXTENSION_REGEX = re.compile(r"^src/(?P<lang>[^/]+)/(?P<extension>[^/]+)")
+MODULE_REGEX = re.compile(r"^:src:(?P<lang>[^:]+):(?P<extension>[^:]+)$")
 PKG_NAME_REGEX = re.compile(r"""pkgName\s*(?:=|\.set\()\s*["']([^"']+)["']""")
 CORE_FILES_REGEX = re.compile(
-    r"^(common/|core/|gradle/|build\.gradle\.kts|gradle\.properties|settings\.gradle\.kts|\.github/scripts/)"
+    r"^(common/|core/|gradle/|lib-multisrc/|build\.gradle\.kts|gradle\.properties|settings\.gradle\.kts|\.github/scripts/)"
 )
 
 
@@ -53,14 +53,18 @@ def get_all_modules(ref: str) -> tuple[list[str], list[str]]:
         if not lang.is_dir():
             continue
         for extension in lang.iterdir():
-            if not extension.is_dir():
+            if not (extension / "build.gradle.kts").is_file():
                 continue
             modules.append(f":src:{lang.name}:{extension.name}")
             deleted.append(resolve_module_suffix(ref, lang.name, extension.name))
     return sorted(modules), sorted(deleted)
 
 
-def get_module_list(ref: str) -> tuple[list[str], list[str], list[str], bool]:
+def get_module_list(ref: str, force_full: bool = False) -> tuple[list[str], list[str], list[str], bool]:
+    if force_full:
+        all_modules, all_deleted = get_all_modules(ref)
+        return all_modules, all_deleted, [":core"], True
+
     diff_output = run_command(f"git diff --name-status {ref}").splitlines()
 
     changed_files = [
@@ -79,7 +83,7 @@ def get_module_list(ref: str) -> tuple[list[str], list[str], list[str], bool]:
         elif match := EXTENSION_REGEX.search(file):
             lang = match.group("lang")
             extension = match.group("extension")
-            if Path("src", lang, extension).is_dir():
+            if Path("src", lang, extension, "build.gradle.kts").is_file():
                 modules.add(f":src:{lang}:{extension}")
             deleted.add(resolve_module_suffix(ref, lang, extension))
 
@@ -97,7 +101,11 @@ def create_matrix(modules: list[str]) -> dict:
     chunks = [modules[i:i + chunk_size] for i in range(0, len(modules), chunk_size)] if modules else []
     return {
         "chunk": [
-            {"number": i + 1, "modules": chunk}
+            {
+                "number": i + 1,
+                "modules": chunk,
+                "tasks": " ".join(f"{m}:assembleRelease" for m in chunk),
+            }
             for i, chunk in enumerate(chunks)
         ]
     }
@@ -105,7 +113,8 @@ def create_matrix(modules: list[str]) -> dict:
 
 def main() -> None:
     _, ref = sys.argv
-    modules, deleted, lint_modules, is_full_rebuild = get_module_list(ref)
+    force_full = os.getenv("FULL_REBUILD", "").lower() == "true"
+    modules, deleted, lint_modules, is_full_rebuild = get_module_list(ref, force_full=force_full)
 
     matrix = create_matrix(modules)
 
@@ -116,12 +125,13 @@ def main() -> None:
     )
 
     if os.getenv("CI") == "true":
-        with open(os.getenv("GITHUB_OUTPUT"), "a") as out_file:
+        with open(os.getenv("GITHUB_OUTPUT"), "a", encoding="utf-8") as out_file:
             out_file.write(f"matrix={json.dumps(matrix)}\n")
+            out_file.write(f"has_work={'true' if modules else 'false'}\n")
+            out_file.write(f"has_delete={'true' if deleted else 'false'}\n")
             out_file.write(f"lint_modules={json.dumps(lint_modules)}\n")
             out_file.write(f"delete={json.dumps(deleted)}\n")
-            if is_full_rebuild:
-                out_file.write("full_rebuild=true\n")
+            out_file.write(f"full_rebuild={'true' if is_full_rebuild else 'false'}\n")
 
 
 if __name__ == "__main__":

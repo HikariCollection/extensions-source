@@ -1,14 +1,6 @@
 package app.hikari.extension.en.roliascan
 
-import app.hikari.extension.core.BrowseManga
-import app.hikari.extension.core.MangaTaro
-import app.hikari.extension.core.SearchWithFilters
-import app.hikari.extension.core.SortFilter
-import app.hikari.extension.core.StatusFilter
-import app.hikari.extension.core.TagFilter
-import app.hikari.extension.core.TagFilterMatch
-import app.hikari.extension.core.TypeFilter
-import app.hikari.extension.core.YearFilter
+import app.hikari.multisrc.mangataro.*
 import app.hikari.source.model.Filter
 import app.hikari.source.model.FilterList
 import app.hikari.source.model.MangasPage
@@ -16,12 +8,11 @@ import app.hikari.source.model.Page
 import app.hikari.source.model.SChapter
 import app.hikari.source.model.SManga
 
-class RoliaScan : MangaTaro() {
-
-    override val name: String = "Rolia Scan"
-    override val baseUrl: String = "https://roliascan.com"
-    override val lang: String = "en"
-    override val supportsLatest: Boolean = true
+class RoliaScan : MangaTaro(
+    name = "Rolia Scan",
+    baseUrl = "https://roliascan.com",
+    lang = "en",
+) {
 
     // ========================== Search =========================
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage =

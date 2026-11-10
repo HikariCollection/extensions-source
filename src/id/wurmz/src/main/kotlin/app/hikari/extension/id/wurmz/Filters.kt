@@ -1,15 +1,11 @@
 package app.hikari.extension.id.wurmz
 
-import app.hikari.source.model.Filter
-
-internal open class UriPartFilter(displayName: String, private val vals: Array<Pair<String, String>>) :
-    Filter.Select<String>(displayName, vals.map { it.first }.toTypedArray()) {
-    fun toUriPart() = vals[state].second
-}
+import app.hikari.extension.core.UriPartFilter
 
 internal class SortFilter :
     UriPartFilter(
         "Urutkan",
+        "sort",
         arrayOf(
             "Update Terbaru" to "update",
             "Komik Baru" to "new",
@@ -25,6 +21,7 @@ internal class SortFilter :
 internal class TypeFilter :
     UriPartFilter(
         "Tipe",
+        "type",
         arrayOf(
             "Semua Tipe" to "",
             "Manga" to "manga",
@@ -36,6 +33,7 @@ internal class TypeFilter :
 internal class StatusFilter :
     UriPartFilter(
         "Status",
+        "status",
         arrayOf(
             "Semua Status" to "",
             "Ongoing" to "ongoing",
@@ -45,7 +43,7 @@ internal class StatusFilter :
         ),
     )
 
-internal class GenreFilter : UriPartFilter("Genre", GENRES)
+internal class GenreFilter : UriPartFilter("Genre", "genre", GENRES)
 
 private val GENRES = arrayOf(
     "Semua Genre" to "",

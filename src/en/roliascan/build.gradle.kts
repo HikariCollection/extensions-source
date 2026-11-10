@@ -5,7 +5,7 @@ plugins {
 hikari {
     name.set("Rolia Scan")
     versionCode.set(1)
-    libVersion.set("1.1")
+    theme.set("mangataro")
     contentWarning.set(ContentWarning.SAFE)
 
     source {

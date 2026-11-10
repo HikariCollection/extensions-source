@@ -1,11 +1,11 @@
 package app.hikari.extension.en.asurascans
 
+import app.hikari.extension.core.UriFilter
+import app.hikari.extension.core.UriMultiSelectFilter
+import app.hikari.extension.core.UriPartFilter
+import app.hikari.extension.core.UriSortFilter
 import app.hikari.source.model.Filter
 import okhttp3.HttpUrl
-
-interface UriFilter {
-    fun addToUri(builder: HttpUrl.Builder)
-}
 
 class SortFilter(defaultSort: String? = null) :
     UriSortFilter(
@@ -50,7 +50,7 @@ class TypeFilter :
         ),
     )
 
-class GenresFilter(genres: List<GenreDto>) :
+class GenreFilter(genres: List<GenreDto>) :
     UriMultiSelectFilter(
         name = "Genres",
         param = "genres",
@@ -85,70 +85,3 @@ class MinChaptersFilter :
     }
 }
 
-open class UriPartFilter(
-    name: String,
-    private val param: String,
-    private val vals: Array<Pair<String, String>>,
-    defaultValue: String? = null,
-) : Filter.Select<String>(
-    name,
-    vals.map { it.first }.toTypedArray(),
-    vals.indexOfFirst { it.second == defaultValue }.takeIf { it != -1 } ?: 0,
-),
-    UriFilter {
-    override fun addToUri(builder: HttpUrl.Builder) {
-        val value = vals[state].second
-        if (value.isNotBlank()) {
-            builder.addQueryParameter(param, value)
-        }
-    }
-}
-
-open class UriSortFilter(
-    name: String,
-    private val sortParam: String,
-    private val orderParam: String,
-    private val vals: Array<Pair<String, String>>,
-    defaultValue: String? = null,
-    private val ascendingValue: String,
-    private val descendingValue: String,
-) : Filter.Sort(
-    name,
-    vals.map { it.first }.toTypedArray(),
-    Selection(
-        vals.indexOfFirst { it.second == defaultValue }
-            .takeIf { it != -1 } ?: 0,
-        ascending = false,
-    ),
-),
-    UriFilter {
-
-    override fun addToUri(builder: HttpUrl.Builder) {
-        val state = state ?: return
-
-        val selected = vals[state.index].second
-        val order = if (state.ascending) ascendingValue else descendingValue
-
-        builder.addQueryParameter(sortParam, selected)
-        builder.addQueryParameter(orderParam, order)
-    }
-}
-
-open class UriMultiSelectOption(name: String, val value: String) : Filter.CheckBox(name)
-
-open class UriMultiSelectFilter(
-    name: String,
-    private val param: String,
-    vals: Array<Pair<String, String>>,
-) : Filter.Group<UriMultiSelectOption>(
-    name,
-    vals.map { UriMultiSelectOption(it.first, it.second) },
-),
-    UriFilter {
-    override fun addToUri(builder: HttpUrl.Builder) {
-        val checked = state.filter { it.state }.map { it.value }
-        if (checked.isNotEmpty()) {
-            builder.addQueryParameter(param, checked.joinToString(","))
-        }
-    }
-}
