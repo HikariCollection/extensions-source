@@ -7,6 +7,10 @@ import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
 RAW_BASE = "https://raw.githubusercontent.com/HikariCollection/extensions/repo"
 SIGNING_KEY = "956e72c8d1dc56c663b07c09d537e10614c25620650015b0f3e22a3d3a2e2e32"
 

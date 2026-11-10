@@ -9,3 +9,5 @@ signingkey.jks
 *.jks
 keystore.properties
 repo/
+__pycache__/
+*.pyc
