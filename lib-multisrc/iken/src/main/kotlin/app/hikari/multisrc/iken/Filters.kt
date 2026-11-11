@@ -1,4 +1,4 @@
-package app.hikari.extension.en.vortexscans
+package app.hikari.multisrc.iken
 
 import app.hikari.source.model.Filter
 import okhttp3.HttpUrl

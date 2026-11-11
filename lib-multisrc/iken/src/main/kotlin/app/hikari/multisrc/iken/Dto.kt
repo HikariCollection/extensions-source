@@ -1,4 +1,4 @@
-package app.hikari.extension.en.vortexscans
+package app.hikari.multisrc.iken
 
 import app.hikari.source.model.SChapter
 import app.hikari.source.model.SManga
@@ -22,6 +22,7 @@ class MangaDetailResponse(
 @Serializable
 class ChaptersResponse(
     val post: ChapterPostDto? = null,
+    val totalChapterCount: Int = 0,
 )
 
 @Serializable
@@ -106,8 +107,6 @@ class MangaDto(
         "CANCELLED", "DROPPED" -> SManga.CANCELLED
         else -> SManga.UNKNOWN
     }
-
-
 }
 
 @Serializable
