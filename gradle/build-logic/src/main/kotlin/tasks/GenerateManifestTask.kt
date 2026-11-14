@@ -65,4 +65,8 @@ abstract class GenerateManifestTask : DefaultTask() {
     }
 }
 
-private fun String.escapeXml() = replace("&", "&amp;").replace("<", "&lt;").replace("\"", "&quot;")
+internal fun String.escapeXml() = replace("&", "&amp;")
+    .replace("<", "&lt;")
+    .replace(">", "&gt;")
+    .replace("\"", "&quot;")
+    .replace("'", "&apos;")

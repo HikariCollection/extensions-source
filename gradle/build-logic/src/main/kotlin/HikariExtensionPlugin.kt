@@ -16,6 +16,7 @@ import org.gradle.kotlin.dsl.register
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import tasks.GenerateManifestTask
 import tasks.GenerateSourceInfoTask
+import java.io.File
 import java.security.MessageDigest
 
 @Serializable
@@ -43,6 +44,50 @@ internal data class HikariSourceMetadata(
 
 private val json = Json { prettyPrint = true }
 
+private const val EXTENSION_PACKAGE_PREFIX = "app.hikari.extension"
+private val PKG_SUFFIX_REGEX = Regex("""^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$""")
+private val SOURCE_CLASS_REGEX = Regex(
+    """(?:class|object)\s+([A-Za-z0-9_]+)\s*(?:\([^)]*\))?\s*:\s*(?:[A-Za-z0-9_.]*Source|SourceFactory|MangaThemesia|Madara|MadaraBase|NatsuId|MangaTaro|Iken|HeanCms)"""
+)
+private val AUXILIARY_FILES = setOf("Dto", "Filters", "Models", "Helper", "Utils")
+
+internal fun resolvePackageSuffix(pkgName: String?, dirSuffix: String): String {
+    if (pkgName.isNullOrBlank()) return dirSuffix
+    require(!pkgName.startsWith("$EXTENSION_PACKAGE_PREFIX.")) {
+        "hikari.pkgName must be the suffix only (e.g. '$dirSuffix'), not a full package name: '$pkgName'"
+    }
+    require(PKG_SUFFIX_REGEX.matches(pkgName)) {
+        "Invalid hikari.pkgName '$pkgName' - expected dot-separated alphanumeric segments (e.g. '$dirSuffix')"
+    }
+    return pkgName
+}
+
+internal fun resolveExtensionClassName(srcDir: File, dirPackageName: String, slug: String): String {
+    val ktFiles = srcDir.listFiles { _, name -> name.endsWith(".kt") }?.sortedBy { it.name } ?: emptyList()
+    val normalizedSlug = slug.replace("-", "").replace("_", "")
+
+    val slugMatch = ktFiles.firstOrNull {
+        it.nameWithoutExtension.replace("-", "").replace("_", "").equals(normalizedSlug, ignoreCase = true)
+    }
+
+    val classMatch = if (slugMatch == null) {
+        ktFiles.firstNotNullOfOrNull { file ->
+            SOURCE_CLASS_REGEX.find(file.readText())?.groupValues?.get(1)
+        }
+    } else null
+
+    val fallbackFile = ktFiles.firstOrNull {
+        it.nameWithoutExtension !in AUXILIARY_FILES
+    }
+
+    val simpleName = slugMatch?.nameWithoutExtension
+        ?: classMatch
+        ?: fallbackFile?.nameWithoutExtension
+        ?: slug.replaceFirstChar { it.uppercase() }
+
+    return "$dirPackageName.$simpleName"
+}
+
 class HikariExtensionPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit = with(target) {
         pluginManager.apply("com.android.application")
@@ -52,16 +97,19 @@ class HikariExtensionPlugin : Plugin<Project> {
         val lang = project.parent?.name ?: "all"
         val slug = project.name
         val dirSuffix = "$lang.$slug"
-        val fullPackageName = "app.hikari.extension.$dirSuffix"
+        val dirPackageName = "$EXTENSION_PACKAGE_PREFIX.$dirSuffix"
+        val resolvedPackageNameProvider = hikari.pkgName
+            .map { "$EXTENSION_PACKAGE_PREFIX.${resolvePackageSuffix(it, dirSuffix)}" }
+            .orElse(dirPackageName)
 
         val libs = rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs")
 
         android {
-            namespace = fullPackageName
+            namespace = dirPackageName
             compileSdk = 37
 
             defaultConfig {
-                applicationId = fullPackageName
+                applicationId = dirPackageName
                 minSdk = 26
                 targetSdk = 35
             }
@@ -136,36 +184,10 @@ class HikariExtensionPlugin : Plugin<Project> {
         val classNameProvider = hikari.extensionClass.orElse(
             providers.provider {
                 val srcDir = project.file("src/main/kotlin/app/hikari/extension/$lang/$slug")
-                val ktFiles = srcDir.listFiles { _, name -> name.endsWith(".kt") } ?: emptyArray()
-                val normalizedSlug = slug.replace("-", "").replace("_", "")
-
-                // Priority 1: File matching slug case-insensitively
-                val slugMatch = ktFiles.firstOrNull {
-                    it.nameWithoutExtension.replace("-", "").replace("_", "").equals(normalizedSlug, ignoreCase = true)
-                }
-
-                // Priority 2: File containing a class extending a known Source base class
-                val sourceClassRegex = Regex("""(?:class|object)\s+([A-Za-z0-9_]+)\s*(?:\([^)]*\))?\s*:\s*(?:[A-Za-z0-9_.]*Source|MangaThemesia|Madara|NatsuId|MangaTaro)""")
-                val classMatch = if (slugMatch == null) {
-                    ktFiles.firstNotNullOfOrNull { file ->
-                        sourceClassRegex.find(file.readText())?.groupValues?.get(1)
-                    }
-                } else null
-
-                // Priority 3: First file not matching known utility file names
-                val fallbackFile = ktFiles.firstOrNull {
-                    it.nameWithoutExtension !in setOf("Dto", "Filters", "Models", "Helper", "Utils")
-                }
-
-                val simpleName = slugMatch?.nameWithoutExtension
-                    ?: classMatch
-                    ?: fallbackFile?.nameWithoutExtension
-                    ?: slug.replaceFirstChar { it.uppercase() }
-
-                "$fullPackageName.$simpleName"
+                resolveExtensionClassName(srcDir, dirPackageName, slug)
             },
         ).map {
-            if (it.contains(".")) it else "$fullPackageName.$it"
+            if (it.contains(".")) it else "$dirPackageName.$it"
         }
 
         val manifestTask = tasks.register<GenerateManifestTask>("generateExtensionManifest") {
@@ -181,6 +203,10 @@ class HikariExtensionPlugin : Plugin<Project> {
         }
 
         androidComponents {
+            finalizeDsl { extension ->
+                extension.defaultConfig.applicationId = resolvedPackageNameProvider.get()
+            }
+
             onVariants { variant ->
                 val vCode = versionCodeProvider.get()
                 val vName = "${libVersionProvider.get()}.$vCode"
@@ -207,6 +233,7 @@ class HikariExtensionPlugin : Plugin<Project> {
                                 name = sName,
                                 lang = sLang,
                                 baseUrl = s.baseUrlProperty.getOrElse(""),
+                                mirrorUrls = s.mirrorUrls.getOrElse(emptyList()),
                             )
                         }
 
@@ -218,7 +245,7 @@ class HikariExtensionPlugin : Plugin<Project> {
 
                         val metadata = HikariExtensionMetadata(
                             name = extNameProvider.get(),
-                            packageName = fullPackageName,
+                            packageName = resolvedPackageNameProvider.get(),
                             extensionLib = libVersionProvider.get(),
                             versionCode = vCode,
                             versionName = vName,

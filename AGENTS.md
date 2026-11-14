@@ -70,6 +70,8 @@ hikari {
 - **ContentWarning**: Must be specified via `ContentWarning.SAFE`, `ContentWarning.MIXED`, or `ContentWarning.NSFW`.
 - **Version Code**: Increment `versionCode` whenever the source is modified or updated.
 - **Lib Version**: Matches the core extension library baseline (currently `"1.1"`).
+- **Custom Package Suffix (`pkgName`)**: Optional suffix override (e.g., `pkgName.set("en.custom")`, without `app.hikari.extension.`) to set `applicationId` and `packageName` independently of the module directory.
+- **Mirror URLs**: Optional fallback domains inside `source { ... }` via `mirrorUrls.set(listOf(...))` or `mirrorUrl("https://mirror.example.com")`.
 - **Multi-Source / Multi-Lang**: Define multiple `source { ... }` blocks inside `hikari { ... }` rather than writing custom factories.
 - **Theme-Based Extensions**: If an extension extends a theme from `lib-multisrc`, declare `theme.set("<theme-name>")` in the `hikari { ... }` block.
 

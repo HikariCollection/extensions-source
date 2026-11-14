@@ -16,6 +16,8 @@ class HikariThemePlugin : Plugin<Project> {
         pluginManager.apply("org.jetbrains.kotlin.plugin.serialization")
 
         val hikariTheme = extensions.create<HikariThemeExtension>("hikariTheme")
+        hikariTheme.baseVersionCode.convention(0)
+        hikariTheme.libVersion.convention("1.1")
 
         val libs = rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs")
 

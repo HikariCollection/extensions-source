@@ -38,10 +38,15 @@ abstract class ExtensionSource {
     abstract val baseUrlProperty: Property<String>
     abstract val versionId: Property<Int>
     abstract val id: Property<Long>
+    abstract val mirrorUrls: ListProperty<String>
 
     var baseUrl: String
         get() = baseUrlProperty.getOrElse("")
         set(value) {
             baseUrlProperty.set(value)
         }
+
+    fun mirrorUrl(vararg urls: String) {
+        mirrorUrls.addAll(*urls)
+    }
 }
