@@ -24,12 +24,12 @@ class Shinigami : KeiSource() {
 
     override val name: String = "Shinigami"
     override val lang: String = "id"
-    override val baseUrl: String = "https://11.shinigami.asia"
+    override val baseUrl: String = "https://s1.shinigami.mx"
     override val id: Long = ID
 
     override val supportsLatest: Boolean = true
 
-    private val apiUrl = "https://api.shngm.io"
+    private val apiUrl = "https://api.shinigami.io"
 
     private val apiHeaders: Headers
         get() = headersBuilder()
@@ -43,9 +43,10 @@ class Shinigami : KeiSource() {
     // ====================== Popular ======================
 
     override suspend fun getPopularManga(page: Int): MangasPage {
+        val offset = (page - 1) * 30
         val url = "$apiUrl/v1/manga/list".toHttpUrl().newBuilder()
-            .addQueryParameter("page", page.toString())
-            .addQueryParameter("page_size", "30")
+            .addQueryParameter("offset", offset.toString())
+            .addQueryParameter("limit", "30")
             .addQueryParameter("sort", "popularity")
             .build()
 
@@ -56,9 +57,10 @@ class Shinigami : KeiSource() {
     // ====================== Latest ======================
 
     override suspend fun getLatestUpdates(page: Int): MangasPage {
+        val offset = (page - 1) * 30
         val url = "$apiUrl/v1/manga/list".toHttpUrl().newBuilder()
-            .addQueryParameter("page", page.toString())
-            .addQueryParameter("page_size", "30")
+            .addQueryParameter("offset", offset.toString())
+            .addQueryParameter("limit", "30")
             .addQueryParameter("sort", "latest")
             .build()
 
@@ -69,9 +71,10 @@ class Shinigami : KeiSource() {
     // ====================== Search ======================
 
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
+        val offset = (page - 1) * 30
         val url = "$apiUrl/v1/manga/list".toHttpUrl().newBuilder()
-            .addQueryParameter("page", page.toString())
-            .addQueryParameter("page_size", "30")
+            .addQueryParameter("offset", offset.toString())
+            .addQueryParameter("limit", "30")
 
         if (query.isNotEmpty()) {
             url.addQueryParameter("q", query)
@@ -88,7 +91,9 @@ class Shinigami : KeiSource() {
     private fun parseMangaList(response: Response): MangasPage {
         val rootObject = response.parseAs<ShinigamiBrowseDto>()
         val projectList = rootObject.data.map(::popularMangaFromObject)
-        val hasNextPage = rootObject.meta.totalPage?.let { rootObject.meta.page < it } ?: false
+        val hasNextPage = rootObject.meta.hasNext
+            ?: rootObject.meta.totalPage?.let { rootObject.meta.page < it }
+            ?: false
         return MangasPage(projectList, hasNextPage)
     }
 
@@ -114,7 +119,7 @@ class Shinigami : KeiSource() {
     override fun getChapterUrl(chapter: SChapter): String = "$baseUrl/chapter/${chapter.url}"
 
     override suspend fun getMangaByUrl(url: HttpUrl): SManga? {
-        if (url.host != "shinigami.asia" && !url.host.endsWith(".shinigami.asia")) return null
+        if (!url.host.endsWith("shinigami.asia") && !url.host.endsWith("shinigami.mx")) return null
         val firstSegment = url.pathSegments.firstOrNull()
         if (firstSegment != "series") return null
         val id = url.pathSegments.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return null
