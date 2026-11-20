@@ -26,6 +26,7 @@ class MetaDto(
     val page: Int = 1,
     @SerialName("total_page") val totalPage: Int? = null,
     @SerialName("has_next") val hasNext: Boolean? = null,
+    @SerialName("next_cursor") val nextCursor: String? = null,
 )
 
 @Serializable
@@ -56,6 +57,7 @@ class TaxonomyItemDto(
 @Serializable
 class ShinigamiChapterListDto(
     @SerialName("data") val chapterList: List<ShinigamiChapterListDataDto>,
+    val meta: MetaDto? = null,
 )
 
 @Serializable

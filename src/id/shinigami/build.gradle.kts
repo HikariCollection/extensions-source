@@ -4,7 +4,7 @@ plugins {
 
 hikari {
     name.set("Shinigami")
-    versionCode.set(2)
+    versionCode.set(3)
     libVersion.set("1.1")
     contentWarning.set(ContentWarning.SAFE)
 

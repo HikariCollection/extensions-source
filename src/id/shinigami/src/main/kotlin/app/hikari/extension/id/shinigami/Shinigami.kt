@@ -191,14 +191,47 @@ class Shinigami : KeiSource() {
     }
 
     private suspend fun getChapterList(manga: SManga): List<SChapter> {
-        val response = client.get("$apiUrl/v1/chapter/${manga.url}/list?page_size=3000", apiHeaders)
-        val result = response.parseAs<ShinigamiChapterListDto>()
-        return result.chapterList.map(::chapterFromObject)
+        val chapterList = mutableListOf<SChapter>()
+        var cursor: String? = null
+
+        do {
+            val url = "$apiUrl/v1/chapter/${manga.url}/list".toHttpUrl().newBuilder()
+                .addQueryParameter("limit", "2000")
+                .addQueryParameter("sort_by", "chapter_number")
+                .addQueryParameter("sort_order", "desc")
+                .apply {
+                    if (cursor != null) {
+                        addQueryParameter("cursor", cursor)
+                    }
+                }
+                .build()
+
+            val response = client.get(url, apiHeaders)
+            val result = response.parseAs<ShinigamiChapterListDto>()
+            val chapters = result.chapterList.map(::chapterFromObject)
+            chapterList.addAll(chapters)
+
+            val meta = result.meta
+            val hasNext = meta?.hasNext ?: false
+            cursor = if (hasNext) meta.nextCursor?.takeIf { it.isNotBlank() } else null
+        } while (cursor != null)
+
+        return chapterList
     }
 
     private fun chapterFromObject(obj: ShinigamiChapterListDataDto): SChapter = SChapter.create().apply {
         date_upload = tryParseInstant(obj.date)
-        name = "Chapter ${obj.name.toString().removeSuffix(".0")} ${obj.title}".trim()
+        val numberString = obj.name.toString().removeSuffix(".0")
+        val cleanTitle = obj.title.trim().takeIf { it.isNotBlank() }
+        name = if (cleanTitle != null) {
+            if (cleanTitle.startsWith("Chapter", ignoreCase = true) || cleanTitle.startsWith("Ch.", ignoreCase = true)) {
+                cleanTitle
+            } else {
+                "Chapter $numberString - $cleanTitle"
+            }
+        } else {
+            "Chapter $numberString"
+        }
         chapter_number = obj.name.toFloat()
         url = obj.chapterId
     }
